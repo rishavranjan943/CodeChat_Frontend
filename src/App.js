@@ -3,7 +3,11 @@ import { useEffect } from "react";
 import Home from "./pages/Home";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
+import Room from "./pages/Room";
 import Dashboard from "./pages/Dashboard";
+import ProtectedRoute from "./components/ProtectedRoute";
+
+
 
 function TokenHandler() {
   const navigate = useNavigate();
@@ -25,7 +29,14 @@ export default function App() {
         <Route path="/" element={<Home />} />
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
-        <Route path="/dashboard" element={<Dashboard />} />
+        <Route path="/dashboard" element={
+          <ProtectedRoute>
+            <Dashboard/>
+          </ProtectedRoute>
+        } />
+        <Route path="/room/:roomId" element={
+            <Room/>
+        } />
       </Routes>
     </BrowserRouter>
   );

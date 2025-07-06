@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Container, Typography, Button } from "@mui/material";
+import RoomForm from "../components/RoomForm";
+
 
 export default function Dashboard() {
   const [email, setEmail] = useState("");
@@ -33,6 +35,7 @@ export default function Dashboard() {
       <Button variant="contained" color="error" onClick={logout}>
         Logout
       </Button>
+      <RoomForm/>
     </Container>
   );
 }

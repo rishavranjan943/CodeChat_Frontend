@@ -41,3 +41,11 @@
     -->
   </body>
 </html>
+<script>
+  const observerError = window.console.error;
+  window.console.error = (...args) => {
+    if (!args[0].toString().includes('ResizeObserver')) {
+      observerError(...args);
+    }
+  };
+</script>

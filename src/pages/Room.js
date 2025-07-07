@@ -1,8 +1,20 @@
 import { useParams, useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 import axiosInstance from "../api/axios";
-import { Container, Typography, Button, List, ListItem } from "@mui/material";
+import {
+  Container,
+  Typography,
+  Button,
+  List,
+  ListItem,
+  Drawer,
+  Box,
+  Divider,
+  IconButton,
+  ListItemText
+} from "@mui/material";
 import { Editor } from "@monaco-editor/react";
+import MenuIcon from "@mui/icons-material/Menu";
 import socket from "../socket";
 
 export default function Room() {
@@ -13,6 +25,9 @@ export default function Room() {
   const [code, setCode] = useState("// Start coding...");
   const [language, setLanguage] = useState("javascript");
   const [output, setOutput] = useState("");
+  const [sidebarOpen, setSidebarOpen] = useState(true);
+
+  const toggleSidebar = () => setSidebarOpen((prev) => !prev);
 
   useEffect(() => {
     const fetchRoom = async () => {
@@ -34,28 +49,21 @@ export default function Room() {
 
         setIsCreator(room.createdBy === userId);
 
-        // Connect to socket and join room
         socket.connect();
         socket.emit("join-room", {
           roomId,
           user: { id: userId, email: user.email },
         });
 
-        // Receive room members
         socket.on("room-members", (users) => {
-          console.log(8);
-          console.log(users);
+          console.log("👥 Users in room:", users);
           setMembers(users);
         });
 
-        // Handle room deletion
         socket.on("room-deleted", () => {
           alert("Room has been deleted.");
           navigate("/dashboard");
         });
-
-        
-        
       } catch (err) {
         alert("Could not fetch room info.");
         navigate("/dashboard");
@@ -72,16 +80,9 @@ export default function Room() {
   }, [roomId, navigate]);
 
   useEffect(() => {
-    socket.on("language-change", (lang) => {
-      setLanguage(lang);
-    });
-    socket.on("code-change", (newCode) => {
-      setCode(newCode);
-    });
-    socket.on("run-code", ({ output }) => {
-      console.log(output)
-      setOutput(output);
-    });
+    socket.on("language-change", (lang) => setLanguage(lang));
+    socket.on("code-change", (newCode) => setCode(newCode));
+    socket.on("run-code", ({ output }) => setOutput(output));
   }, []);
 
   const handleLanguageChange = (e) => {
@@ -113,90 +114,119 @@ export default function Room() {
     }
   };
 
-
   return (
-    <Container sx={{ mt: 8 }}>
-      <Typography variant="h4" gutterBottom>
-        Room: {roomId}
-      </Typography>
+    <Container sx={{ mt: 8, ml: sidebarOpen ? "260px" : "0", transition: "margin-left 0.3s" }}>
+      {/* Sidebar Drawer */}
+      <Drawer variant="persistent" anchor="left" open={sidebarOpen}>
+        <Box sx={{ width: 250, p: 2, mt: 4 }}>
+          <Typography variant="h6">Room ID: {roomId}</Typography>
 
-      {isCreator && (
-        <Button
-          variant="outlined"
-          color="error"
-          sx={{ mt: 2, mb: 4 }}
-          onClick={deleteRoom}
-        >
-          Delete Room
-        </Button>
-      )}
+          <Divider sx={{ my: 2 }} />
 
-      {!isCreator && (
-        <Button
-          variant="contained"
-          color="secondary"
-          sx={{ mt: 2, mb: 4 }}
-          onClick={() => {
-            socket.emit("leave-room", roomId);
-            socket.disconnect();
-            navigate("/dashboard");
-          }}
-        >
-          Leave Room
-        </Button>
-      )}
+          <Typography variant="subtitle1">👥 Members</Typography>
+          <List>
+            {members.map((member, index) => (
+              <ListItem key={index}>
+                <ListItemText primary={member?.email || member?.id || "Anonymous"} />
+              </ListItem>
+            ))}
+          </List>
 
-      <Typography variant="h6">👥 Members in Room:</Typography>
-      <List>
-        {members.map((member, index) => (
-          <ListItem key={index}>
-            {member?.email || member?.id || "Anonymous"}
-          </ListItem>
-        ))}
-      </List>
+          <Divider sx={{ my: 2 }} />
 
-      <Typography variant="h6" sx={{ mt: 4 }}>
-        👨‍💻 Code Editor:
-      </Typography>
-      <div style={{ marginTop: "20px", marginBottom: "10px" }}>
-        <label>Select Language: </label>
-        <select value={language} onChange={handleLanguageChange}>
-          <option value="javascript">JavaScript</option>
-          <option value="c">C</option>
-          <option value="python">Python</option>
-          <option value="cpp">C++</option>
-          <option value="java">Java</option>
-        </select>
-      </div>
+          {isCreator ? (
+            <Button variant="contained" color="error" fullWidth onClick={deleteRoom}>
+              Delete Room
+            </Button>
+          ) : (
+            <Button
+              variant="outlined"
+              color="secondary"
+              fullWidth
+              onClick={() => {
+                socket.emit("leave-room", roomId);
+                socket.disconnect();
+                navigate("/dashboard");
+              }}
+            >
+              Leave Room
+            </Button>
+          )}
+        </Box>
+      </Drawer>
 
-      <Editor
-        height="400px"
-        language={language} // ← dynamic
-        value={code}
-        onChange={handleEditorChange}
-        theme="vs-dark"
-      />
+      {/* Toggle Button */}
+      <IconButton
+        onClick={toggleSidebar}
+        sx={{ position: "absolute", top: 10, left: 10, zIndex: 9999 }}
+      >
+        <MenuIcon />
+      </IconButton>
 
-      <Button
-          variant="contained"
-          color="secondary"
-          sx={{ mt: 2, mb: 4 }}
-          onClick={() => {
-            socket.emit("run-code", {
-              roomId,
-              code,
-              language,
-            });
-          }}
-        >Run Code</Button>
+      {/* Main Split View */}
+      <Box sx={{ display: "flex", flexDirection: "row", gap: 2 }}>
+        {/* Left Half: Code Editor */}
+        <Box sx={{ width: "60%" }}>
+          <Typography variant="h6" sx={{ mt: 4 }}>
+            👨‍💻 Code Editor:
+          </Typography>
 
-        <Typography variant="h6" sx={{ mt: 4 }}>
-        🖨️ Output:
-      </Typography>
-      <pre style={{ background: "#1e1e1e", color: "#fff", padding: "10px", borderRadius: "5px", whiteSpace: "pre-wrap" }}>
-        {output || "No output yet..."}
-      </pre>
-      
+          <div style={{ marginTop: "20px", marginBottom: "10px" }}>
+            <label>Select Language: </label>
+            <select value={language} onChange={handleLanguageChange}>
+              <option value="javascript">JavaScript</option>
+              <option value="c">C</option>
+              <option value="python">Python</option>
+              <option value="cpp">C++</option>
+              <option value="java">Java</option>
+            </select>
+          </div>
+
+          <Editor
+            height="400px"
+            language={language}
+            value={code}
+            onChange={handleEditorChange}
+            theme="vs-dark"
+          />
+
+          <Button
+            variant="contained"
+            color="secondary"
+            sx={{ mt: 2, mb: 4 }}
+            onClick={() => {
+              socket.emit("run-code", {
+                roomId,
+                code,
+                language,
+              });
+            }}
+          >
+            Run Code
+          </Button>
+
+          <Typography variant="h6" sx={{ mt: 4 }}>
+            🖨️ Output:
+          </Typography>
+          <pre
+            style={{
+              background: "#1e1e1e",
+              color: "#fff",
+              padding: "10px",
+              borderRadius: "5px",
+              whiteSpace: "pre-wrap",
+            }}
+          >
+            {output || "No output yet..."}
+          </pre>
+        </Box>
+
+        {/* Right Half: Placeholder for Video Call */}
+        <Box sx={{ width: "40%", mt: 4 }}>
+          <Typography variant="h6">🎥 Video Call Area (Coming Soon)</Typography>
+          {/* You can insert your video call component here */}
+        </Box>
+      </Box>
     </Container>
   );
 }

@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from "react";
 import io from "socket.io-client";
 import { Typography, Grid, Button } from "@mui/material";
 
-const SERVER_URL = "http://localhost:4000"; // or use process.env.BACKEND_URL
+const SERVER_URL = process.env.REACT_APP_API_URL; // or use process.env.BACKEND_URL
 
 export default function VideoCall({ roomId, user }) {
   const socketRef = useRef();
